@@ -20,6 +20,7 @@ class Bot:
         self.admin_ids = config['ADMIN_IDS']
         self.group_link = config['GROUP_LINK']
         self.app_name = config.get('APP_NAME', 'xvcen-whatsapp-bot')  # Имя приложения для webhook
+        self.port = int(os.getenv('PORT', 8080))  # Порт из переменных окружения
 
         # Проверка токена
         if not self.token or not self.token.strip():
@@ -81,15 +82,34 @@ class Bot:
             else:
                 del self.admin_messages[user_id]
 
+    async def setup_webhook(self):
+        """Настройка webhook"""
+        try:
+            webhook_url = f"https://{self.app_name}.onrender.com/webhook"
+            logger.info(f"Устанавливаем webhook: {webhook_url}")
+            await self.app.bot.set_webhook(url=webhook_url)
+            logger.info("Webhook успешно установлен")
+        except Exception as e:
+            logger.error(f"Ошибка установки webhook: {e}")
+            raise
+
     def run(self):
         """Запуск бота с использованием webhook"""
-        logger.info(f"Запуск бота с webhook на https://{self.app_name}.onrender.com/webhook")
-        self.app.run_webhook(
-            listen="0.0.0.0",
-            port=8080,
-            url_path="/webhook",
-            webhook_url=f"https://{self.app_name}.onrender.com/webhook"
-        )
+        try:
+            logger.info(f"Запуск бота с webhook на https://{self.app_name}.onrender.com/webhook")
+            logger.info(f"Слушаем на порту: {self.port}")
+            
+            self.app.run_webhook(
+                listen="0.0.0.0",
+                port=self.port,
+                url_path="/webhook",
+                webhook_url=f"https://{self.app_name}.onrender.com/webhook"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка запуска webhook: {e}")
+            # Fallback на polling для локальной разработки
+            logger.info("Переключаемся на polling...")
+            self.app.run_polling()
 
 def main():
     bot = Bot()
