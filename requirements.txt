@@ -1,3 +1,4 @@
-python-telegram-bot[webhooks]
 Flask
+python-telegram-bot
 python-dotenv
+Flask[async]
