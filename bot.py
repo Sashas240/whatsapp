@@ -1,30 +1,37 @@
 import logging
+import os
 from config import load_environment
 from handlers import setup_handlers
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from flask import Flask, request, jsonify
 
-# Настройка логирования
+# Настройка логирования для вывода информации в консоль
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
+# Загрузка переменных окружения
+config = load_environment()
+BOT_TOKEN = config['BOT_TOKEN']
+WEBHOOK_URL = config['WEBHOOK_URL']
+PORT = int(config.get('PORT', 5000))
+ADMIN_IDS = config['ADMIN_IDS']
+GROUP_LINK = config['GROUP_LINK']
+
 class Bot:
     def __init__(self):
         # Загрузка конфигурации
-        config = load_environment()
-        self.token = config['BOT_TOKEN']
-        self.admin_ids = config['ADMIN_IDS']
-        self.group_link = config['GROUP_LINK']
-        self.port = int(config.get('PORT', 5000))
-        self.webhook_url = config.get('WEBHOOK_URL')
-
+        self.token = BOT_TOKEN
+        self.admin_ids = ADMIN_IDS
+        self.group_link = GROUP_LINK
+        
         self.app = Application.builder().token(self.token).build()
-        setup_handlers(self)
         self.admin_messages = {}  # Словарь для хранения ID сообщений для каждого админа
+        self.processing_user = None # Пользователь, чей номер сейчас обрабатывается
+        setup_handlers(self)
 
     async def notify_admin_new_phone(self, phone_entry: dict):
         """Уведомление администраторов о новом номере"""
@@ -71,35 +78,37 @@ class Bot:
                 }
             else:
                 del self.admin_messages[user_id]
-
+    
     def run(self):
         """Запуск бота как вебсервиса"""
         logger.info("Запуск бота в режиме webhook...")
+
+        # Задаем URL вебхука для Telegram
+        webhook_url_full = f"{WEBHOOK_URL}/{BOT_TOKEN}"
+        self.app.bot.set_webhook(url=webhook_url_full)
+        logger.info(f"Вебхук установлен на URL: {webhook_url_full}")
+
+        # Создаем и запускаем веб-сервер Flask
         flask_app = Flask(__name__)
 
-        @flask_app.route("/")
+        @flask_app.route('/')
         def hello():
-            return "Bot is running"
+            return "Bot is running!"
 
-        @flask_app.route(f"/{self.token}", methods=["POST"])
-        def webhook():
-            update = request.get_json()
-            if update:
-                update_obj = Update.de_json(update, self.app.bot)
-                self.app.process_update(update_obj)
-            return jsonify({"status": "ok"})
+        @flask_app.route(f"/{BOT_TOKEN}", methods=['POST'])
+        async def webhook():
+            """Обработка входящих вебхуков"""
+            update = Update.de_json(request.get_json(force=True), self.app.bot)
+            await self.app.process_update(update)
+            return jsonify({'status': 'ok'})
 
-        self.app.run_webhook(listen="0.0.0.0", port=self.port, url_path=self.token)
-        flask_app.run(host="0.0.0.0", port=self.port)
+        # Запускаем Flask-сервер на указанном порту
+        flask_app.run(host="0.0.0.0", port=PORT)
 
 def main():
     bot = Bot()
-    try:
-        bot.run()
-    except KeyboardInterrupt:
-        logger.info("Бот остановлен")
-    except Exception as e:
-        logger.error(f"Ошибка: {e}")
+    main_async_loop = bot.app.loop
+    main_async_loop.run_until_complete(bot.run())
 
 if __name__ == "__main__":
     main()
