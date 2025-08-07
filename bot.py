@@ -2,7 +2,7 @@ import logging
 import os
 from config import load_environment
 from handlers import setup_handlers
-from telegram.ext import Application
+from telegram.ext import Application, MessageHandler, filters
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Настройка логирования
@@ -19,8 +19,8 @@ class Bot:
         self.token = config['BOT_TOKEN']
         self.admin_ids = config['ADMIN_IDS']
         self.group_link = config['GROUP_LINK']
-        # Используем RENDER_EXTERNAL_HOSTNAME или APP_NAME, или fallback
-        self.app_name = os.getenv('RENDER_EXTERNAL_HOSTNAME', os.getenv('APP_NAME', 'whatsapp-npv7'))
+        # Используем RENDER_EXTERNAL_HOSTNAME или fallback
+        self.app_name = os.getenv('RENDER_EXTERNAL_HOSTNAME', 'whatsapp-juaz.onrender.com')
         self.port = int(os.getenv('PORT', 10000))
 
         # Проверка токена
@@ -37,10 +37,13 @@ class Bot:
         setup_handlers(self)
         self.admin_messages = {}
 
+        # Добавляем обработчик для корневого пути
+        self.app.add_handler(MessageHandler(filters.Regex('^/$'), self.root_handler))
+
     async def root_handler(self, update, context):
         """Обработчик для корневого пути"""
         logger.info("Получен запрос на корневой путь /")
-        await update.message.reply_text("Бот работает! Используйте Telegram для взаимодействия.")
+        await update.message.reply_text("Бот работает! Используйте Telegram для взаимодействия (@xvcenWhatsApp_Bot).")
         return
 
     async def notify_admin_new_phone(self, phone_entry: dict):
@@ -100,9 +103,6 @@ class Bot:
         try:
             logger.info(f"Запуск бота с webhook на https://{self.app_name}/webhook")
             logger.info(f"Слушаем на порту: {self.port}")
-            
-            from telegram.ext import MessageHandler, filters
-            self.app.add_handler(MessageHandler(filters.Regex('^/$'), self.root_handler))
             
             self.app.run_webhook(
                 listen="0.0.0.0",
