@@ -4,7 +4,6 @@ from config import load_environment
 from handlers import setup_handlers
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application
-from flask import Flask, request, jsonify
 import asyncio
 
 # Настройка логирования для вывода информации в консоль
@@ -23,15 +22,14 @@ GROUP_LINK = config.get('GROUP_LINK')
 # Дополнительные переменные для вебхука
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 PORT = int(os.getenv('PORT', 5000))
+LISTEN_IP = "0.0.0.0"
 
 class Bot:
     def __init__(self):
-        # Загрузка конфигурации
         self.token = BOT_TOKEN
         self.admin_ids = ADMIN_IDS
         self.group_link = GROUP_LINK
         
-        # Создаем экземпляр Application
         self.app = Application.builder().token(self.token).build()
         setup_handlers(self)
         self.admin_messages = {}  # Словарь для хранения ID сообщений для каждого админа
@@ -87,41 +85,26 @@ class Bot:
 def main():
     logger.info("Запуск бота в режиме webhook...")
     
-    app = Application.builder().token(BOT_TOKEN).build()
     bot_instance = Bot()
     
     # Настраиваем обработчики команд и сообщений
     setup_handlers(bot_instance)
     
-    flask_app = Flask(__name__)
-
-    @flask_app.route('/')
-    def hello():
-        return "Bot is running!"
-
-    @flask_app.route(f"/{BOT_TOKEN}", methods=['POST'])
-    async def webhook():
-        """Обработка входящих вебхуков"""
-        update = Update.de_json(request.get_json(force=True), app.bot)
-        async with app:
-            await app.process_update(update)
-        return jsonify({'status': 'ok'})
-    
-    # Задаем URL вебхука для Telegram
-    async def set_telegram_webhook():
-        webhook_url_full = f"{WEBHOOK_URL}/{BOT_TOKEN}"
-        # Проверяем, что WEBHOOK_URL существует, прежде чем устанавливать его
+    # Запускаем бота в режиме вебхука, используя встроенные возможности библиотеки python-telegram-bot
+    try:
         if WEBHOOK_URL:
-            await app.bot.set_webhook(url=webhook_url_full)
-            logger.info(f"Вебхук установлен на URL: {webhook_url_full}")
+            # Обрати внимание, что app.run_webhook автоматически запускает веб-сервер и Flask
+            bot_instance.app.run_webhook(
+                listen=LISTEN_IP,
+                port=PORT,
+                url_path=BOT_TOKEN,
+                webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
+            )
+            logger.info(f"Вебхук запущен на {LISTEN_IP}:{PORT} с URL {WEBHOOK_URL}/{BOT_TOKEN}")
         else:
-            logger.error("Переменная WEBHOOK_URL не найдена. Вебхук не будет установлен.")
-        
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(set_telegram_webhook())
-    
-    # Запускаем Flask-сервер на указанном порту
-    flask_app.run(host="0.0.0.0", port=PORT)
+            logger.error("Переменная WEBHOOK_URL не найдена. Вебхук не будет запущен.")
+    except Exception as e:
+        logger.error(f"Ошибка при запуске вебхука: {e}")
 
 if __name__ == "__main__":
     main()
