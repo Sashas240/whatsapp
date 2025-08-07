@@ -1,4 +1,5 @@
 import logging
+import os
 from config import load_environment
 from handlers import setup_handlers
 from telegram.ext import Application
@@ -18,7 +19,17 @@ class Bot:
         self.token = config['BOT_TOKEN']
         self.admin_ids = config['ADMIN_IDS']
         self.group_link = config['GROUP_LINK']
-        self.app_name = config.get('APP_NAME', 'my-telegram-bot')  # Имя приложения для webhook
+        self.app_name = config.get('APP_NAME', 'xvcen-whatsapp-bot')  # Имя приложения для webhook
+
+        # Проверка токена
+        if not self.token or not self.token.strip():
+            logger.error("BOT_TOKEN не установлен или пустой!")
+            raise ValueError("BOT_TOKEN не установлен или пустой!")
+        if ":" not in self.token:
+            logger.error(f"Недействительный формат BOT_TOKEN: {self.token}")
+            raise ValueError("Недействительный формат BOT_TOKEN. Получите токен от @BotFather.")
+
+        logger.info(f"Используемый BOT_TOKEN: {self.token[:10]}... (скрыт для безопасности)")
         
         self.app = Application.builder().token(self.token).build()
         setup_handlers(self)
@@ -72,8 +83,8 @@ class Bot:
 
     def run(self):
         """Запуск бота с использованием webhook"""
-        logger.info("Запуск бота с webhook...")
-        self.app.run_webhooks(
+        logger.info(f"Запуск бота с webhook на https://{self.app_name}.onrender.com/webhook")
+        self.app.run_webhook(
             listen="0.0.0.0",
             port=8080,
             url_path="/webhook",
