@@ -18,5 +18,7 @@ def load_environment():
     return {
         'BOT_TOKEN': os.getenv('BOT_TOKEN'),
         'ADMIN_IDS': admin_ids,
-        'GROUP_LINK': "https://t.me/+0KppidSPsRFmYmUx"
+        'GROUP_LINK': "https://t.me/+0KppidSPsRFmYmUx",
+        'WEBHOOK_URL': os.getenv('WEBHOOK_URL'),
+        'PORT': os.getenv('PORT')
     }

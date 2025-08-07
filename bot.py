@@ -3,8 +3,7 @@ from config import load_environment
 from handlers import setup_handlers
 from telegram.ext import Application
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from flask import Flask
-import threading
+from flask import Flask, request, jsonify
 
 # Настройка логирования
 logging.basicConfig(
@@ -13,13 +12,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Создаем Flask приложение
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is alive!", 200
-
 class Bot:
     def __init__(self):
         # Загрузка конфигурации
@@ -27,7 +19,9 @@ class Bot:
         self.token = config['BOT_TOKEN']
         self.admin_ids = config['ADMIN_IDS']
         self.group_link = config['GROUP_LINK']
-        
+        self.port = int(config.get('PORT', 5000))
+        self.webhook_url = config.get('WEBHOOK_URL')
+
         self.app = Application.builder().token(self.token).build()
         setup_handlers(self)
         self.admin_messages = {}  # Словарь для хранения ID сообщений для каждого админа
@@ -78,21 +72,25 @@ class Bot:
             else:
                 del self.admin_messages[user_id]
 
-    def run_flask(self):
-        """Запуск Flask сервера"""
-        app.run(host='0.0.0.0', port=8080)
-
     def run(self):
-        """Запуск бота"""
-        logger.info("Запуск бота...")
-        
-        # Запускаем Flask в отдельном потоке
-        flask_thread = threading.Thread(target=self.run_flask)
-        flask_thread.daemon = True
-        flask_thread.start()
-        
-        # Запускаем Telegram бота
-        self.app.run_polling()
+        """Запуск бота как вебсервиса"""
+        logger.info("Запуск бота в режиме webhook...")
+        flask_app = Flask(__name__)
+
+        @flask_app.route("/")
+        def hello():
+            return "Bot is running"
+
+        @flask_app.route(f"/{self.token}", methods=["POST"])
+        def webhook():
+            update = request.get_json()
+            if update:
+                update_obj = Update.de_json(update, self.app.bot)
+                self.app.process_update(update_obj)
+            return jsonify({"status": "ok"})
+
+        self.app.run_webhook(listen="0.0.0.0", port=self.port, url_path=self.token)
+        flask_app.run(host="0.0.0.0", port=self.port)
 
 def main():
     bot = Bot()
