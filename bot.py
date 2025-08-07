@@ -71,17 +71,14 @@ class Bot:
                 del self.admin_messages[user_id]
 
     def run(self):
-        """Запуск бота"""
-        logger.info("Запуск бота...")
-        # Для polling (используется по умолчанию)
-        self.app.run_polling()
-        # Для webhook (раскомментируйте для использования):
-        # self.app.run_webhooks(
-        #     listen="0.0.0.0",
-        #     port=8080,
-        #     url_path="/webhook",
-        #     webhook_url=f"https://{self.app_name}.fly.dev/webhook"
-        # )
+        """Запуск бота с использованием webhook"""
+        logger.info("Запуск бота с webhook...")
+        self.app.run_webhooks(
+            listen="0.0.0.0",
+            port=8080,
+            url_path="/webhook",
+            webhook_url=f"https://{self.app_name}.onrender.com/webhook"
+        )
 
 def main():
     bot = Bot()
