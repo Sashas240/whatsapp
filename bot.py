@@ -20,7 +20,7 @@ class Bot:
         self.admin_ids = config['ADMIN_IDS']
         self.group_link = config['GROUP_LINK']
         # Используем RENDER_EXTERNAL_HOSTNAME или fallback
-        self.app_name = os.getenv('RENDER_EXTERNAL_HOSTNAME', 'whatsapp-dy7y.onrender.com')
+        self.app_name = os.getenv('RENDER_EXTERNAL_HOSTNAME', 'whatsapp-o2pb.onrender.com')
         self.port = int(os.getenv('PORT', 10000))
 
         # Проверка токена
@@ -48,7 +48,6 @@ class Bot:
 
     async def notify_admin_new_phone(self, phone_entry: dict):
         """Уведомление администраторов о новом номере"""
-        logger.info(f"Отправка уведомления о новом номере: {phone_entry['phone']}")
         user_info = f"@{phone_entry['username']}" if phone_entry['username'] != f"user_{phone_entry['user_id']}" else f"ID: {phone_entry['user_id']}"
         
         if self.processing_user is None:
@@ -70,12 +69,10 @@ class Bot:
                 except Exception as e:
                     logger.error(f"Ошибка отправки уведомления админу {admin_id}: {e}")
         else:
-            logger.info("Номер добавлен в очередь, пользователь уже обрабатывается")
             return
 
     async def delete_admin_messages(self, user_id: int, except_admin_id: int = None):
         """Удаление сообщений о номере у всех администраторов, кроме указанного"""
-        logger.info(f"Удаление сообщений для user_id: {user_id}")
         if user_id in self.admin_messages:
             for admin_id, message_id in self.admin_messages[user_id].items():
                 if admin_id != except_admin_id:
