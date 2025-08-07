@@ -2,7 +2,7 @@ services:
   - type: web
     name: xvcen-whatsapp-bot
     env: python
-    region: frankfurt  # Подходит для Украины
+    region: frankfurt
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
@@ -15,7 +15,5 @@ services:
         value: 7302972623,7902236440
       - key: GROUP_LINK
         value: https://t.me/+0KppidSPsRFmYmUx
-      - key: APP_NAME
-        value: whatsapp-avoc  # Реальное имя приложения из логов
       - key: PORT
-        value: 10000  # Порт который использует Render
+        value: 10000
