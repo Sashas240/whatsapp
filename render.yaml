@@ -10,12 +10,12 @@ services:
     numInstances: 1
     envVars:
       - key: BOT_TOKEN
-        value: 8464665934:AAEJownLIcIAhBsb2x73rmEwM4masDLAfsE  # Замените на новый токен от @BotFather
+        value: 8464665934:AAEJownLIcIAhBsb2x73rmEwM4masDLAfsE
       - key: ADMIN_IDS
         value: 7302972623,7902236440
       - key: GROUP_LINK
         value: https://t.me/+0KppidSPsRFmYmUx
       - key: APP_NAME
-        value: xvcen-whatsapp-bot  # Уникальное имя приложения
+        value: whatsapp-avoc  # Реальное имя приложения из логов
       - key: PORT
-        value: 8080
+        value: 10000  # Порт который использует Render

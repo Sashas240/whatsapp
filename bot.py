@@ -19,7 +19,7 @@ class Bot:
         self.token = config['BOT_TOKEN']
         self.admin_ids = config['ADMIN_IDS']
         self.group_link = config['GROUP_LINK']
-        self.app_name = config.get('APP_NAME', 'xvcen-whatsapp-bot')  # Имя приложения для webhook
+        self.app_name = config.get('APP_NAME', 'whatsapp-avoc')  # Имя приложения для webhook
         self.port = int(os.getenv('PORT', 8080))  # Порт из переменных окружения
 
         # Проверка токена
